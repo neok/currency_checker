@@ -1,0 +1,52 @@
+services:
+  db:
+    image: mariadb:lts
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command:
+      - "-path=/migrations"
+      - "-database=mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@tcp(db:3306)/${MARIADB_DATABASE}"
+      - "up"
+
+  api:
+    build: .
+    image: currency:latest
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+    entrypoint: ["/usr/local/bin/api"]
+
+  fetch:
+    image: currency:latest
+    profiles: ["tools"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    entrypoint: ["/usr/local/bin/fetch"]
+
+volumes:
+  db_data:
