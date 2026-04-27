@@ -1,5 +1,9 @@
 # Currency exchange rates microservice
 
+<img width="599" alt="Screenshot 2026-04-27 234146" src="https://github.com/user-attachments/assets/63d6a140-5dd6-41b7-a58b-0cab3917b065" />
+<img width="599" alt="Screenshot 2026-04-27 234214" src="https://github.com/user-attachments/assets/df392e1b-8e56-4fc7-b90a-0fc81e823850" />
+
+
 A small Go service that fetches currency exchange rates from the Bank of Latvia
 RSS feed (`https://www.bank.lv/vk/ecb_rss.xml`), stores them in MariaDB, and
 exposes them over HTTP.
