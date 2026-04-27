@@ -56,7 +56,7 @@ make fetch ARGS="--rss-url https://example.com/feed.xml --currencies USD"
 
 Defaults come from `FETCH_CURRENCIES` and `RSS_URL` in `.env`.
 
-The API listens on `HTTP_PORT` (8088 by default - you can set it in `.env`).
+The API listens on `HTTP_PORT` (8080 by default - you can set it in `.env`).
 
 ## Layout
 
@@ -101,10 +101,17 @@ gap, not an oversight:
 - **Config validation.** Env vars are read with `os.Getenv` and `strconv.Atoi`
   errors are ignored. Bad values silently become zero. Fail-fast validation
   belongs in `internal/config/config.go` 
-- **Response cache is process-local.** A 5-minute in-memory cache per API
-  process. There's no invalidation on fetch, so a cached response can lag
-  behind the DB by up to 5 minutes. Redis (or a shorter TTL, or no cache at
-  all) would be the next step.
+- **Response cache is probably overkill.** The API caches JSON responses in
+  memory for 5 minutes. The fetch command can't invalidate it, so the API can
+  serve stale data for up to 5 minutes after a fetch. Honestly, the queries
+  are cheap and rates change once a day, so the cache isn't earning its keep.
+  Easy fix: drop it and rely on the `Cache-Control` header for browser/CDN
+  caching. If you want burst protection, drop the TTL to ~30s. For multiple
+  replicas, move to Redis with explicit invalidation.
+
+  I added the cache mostly to show how it would be wired in (the `Cache[V]`
+  interface + `InMemoryCache` are easy to swap for Redis if it ever mattered).
+  *For this specific use case  daily rates, indexed reads  it's overkill.*
 - **No retries / backoff on the upstream RSS fetch.** A flaky network turns
   into a failed currency for that run. `job.Run` already tolerates partial
   failures, so it's not catastrophic, but a single retry would help.
@@ -114,8 +121,11 @@ gap, not an oversight:
   only checks `>= 1`. Either reject `> 1000` in the validator or document the
   cap in the response.
 - **No `/healthz` or `/readyz`.** Fine for a test task; would be expected in k8s.
-- **Integration tests.** Only unit tests. A real DB test would use
-  testcontainers or a dedicated `make test-integration` target.
+- **No integration tests against real MariaDB.** The unit tests cover the
+  parser, validator, handler, and fan-out job, but `MySQLStore` is only
+  verified by reading the SQL. The minimum I'd add is one test under a
+  `//go:build integration` tag and a `make test-integration` target, using
+  testcontainers-go
 - **No structured request IDs / trace propagation.** Logs identify requests by
   method+path+timestamp only.
 

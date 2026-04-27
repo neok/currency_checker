@@ -1,4 +1,4 @@
-.PHONY: run api down logs fetch test clean
+.PHONY: run api down logs fetch test test-integration clean
 
 # Bring up DB, run migrations, build  start the API.
 run:
@@ -26,6 +26,10 @@ fetch:
 
 test:
 	go test ./...
+
+# Integration tests. Spins up real MariaDB via testcontainers; needs Docker.
+test-integration:
+	go test -tags=integration -timeout 120s ./...
 
 clean:
 	docker compose down -v
