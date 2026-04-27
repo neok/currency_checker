@@ -19,10 +19,8 @@ func Run(ctx context.Context, logger *slog.Logger, f fetcher.Fetcher, s data.Sto
 		errs []error
 	)
 
-	for _, c := range currencies {
-		wg.Add(1)
-		go func(currency string) {
-			defer wg.Done()
+	for _, currency := range currencies {
+		wg.Go(func() {
 			// Per-currency timeout. Whole job deadline is the caller's responsibility.
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
@@ -40,7 +38,7 @@ func Run(ctx context.Context, logger *slog.Logger, f fetcher.Fetcher, s data.Sto
 				errs = append(errs, fmt.Errorf("%s: %w", currency, err))
 				mu.Unlock()
 			}
-		}(c)
+		})
 	}
 	wg.Wait()
 
