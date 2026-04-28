@@ -30,7 +30,7 @@ There are two binaries:
 Both endpoints set `Cache-Control: public, max-age=300` and use a 5-minute
 in-process response cache (see "Skipped / could be improved" below).
 
-## Running it
+## Running it (Command, which starts the microservice so that the endpoints are accessible to users.)
 
 Requires Docker. The Makefile drives everything.
 
